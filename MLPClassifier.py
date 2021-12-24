@@ -65,13 +65,22 @@ class MLPClassifier:
                 self.W[l] = self.W[l] - self.learning_rate*dW[l]
                 self.b[l] = self.b[l] - self.learning_rate*db[l]
 
-        return cost_function#, sigmoid[len(self.hidden_layer_size)].T
+        return cost_function
 
 
 
-    def predict(X_test : np.array):
-        pass
-
+    def predict(self,X_test : np.array,threshold=0.5):
+        prediction_array = X_test.T
+        for i in range(len(self.hidden_layer_size)+1):
+            prediction_array = self.W[i].dot(prediction_array) + self.b[i]
+            prediction_array = 1/(1+np.exp(-prediction_array))
+        prediction = np.zeros((X_test.shape[0],1))
+        prediction_array = prediction_array.T>threshold
+        arg = prediction_array.argmax(axis=1)
+        for l in range(X_test.shape[0]):
+            if prediction_array[l].any(): 
+                prediction[l] = arg[l]+1
+        return prediction
 
 if __name__ == "__main__":
     X_train =np.array([[-100,-10],[0,2],[10,15],[-30,-1],[1,-2],[20,15]])
@@ -80,3 +89,6 @@ if __name__ == "__main__":
 
     model = MLPClassifier((2,))
     print(model.fit(X_train,Y_train))
+    X_test = np.array([[-40,-10],[3,2],[100,15],[-5,-2],[2,-2],[15,25]])
+    d=model.predict(X_test)
+    print(d)
