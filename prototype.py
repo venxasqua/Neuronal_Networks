@@ -18,11 +18,10 @@ class Prototype:
         np.random.seed(42)
         self.W = [0,0]
         self.b = [0,0]
-        Z = [0,0]
+        #Z = [0,0]
         dZ = [0,0]
         dW = [0,0]
         db = [0,0]
-        dW = [0,0]
         sigmoid = [0,0]
         self.W[0] = np.random.randn(X_train.shape[0],X_train.shape[0])
         self.W[1] = np.random.randn(1,X_train.shape[0])
@@ -32,12 +31,12 @@ class Prototype:
             """ First compute the forward propagation"""
 
             #first layer
-            Z[0] = self.W[0].dot(X_train) + self.b[0]
-            sigmoid[0] = 1/(1 + np.exp(-Z[0]))
+            #Z[0] = self.W[0].dot(X_train) + self.b[0]
+            sigmoid[0] = 1/(1 + np.exp(-(self.W[0].dot(X_train) + self.b[0])))
 
             #second layer
-            Z[1] = self.W[1].dot(sigmoid[0])+self.b[1]
-            sigmoid[1] = 1/(1+np.exp(-Z[1]))
+            #Z[1] = self.W[1].dot(sigmoid[0])+self.b[1]
+            sigmoid[1] = 1/(1+np.exp(-(self.W[1].dot(sigmoid[0])+self.b[1])))
             
 
             cost_function = -np.mean(Y_train*np.log(sigmoid[1])+(1-Y_train)*np.log(1-sigmoid[1]))
@@ -64,4 +63,8 @@ class Prototype:
             prediction = self.W[i].dot(prediction) + self.b[i]
             prediction = 1/(1+np.exp(-prediction))
         return prediction.T
-
+if __name__ == "__main__":
+    X_train =np.array([[1],[2],[3]])
+    Y_train = np.array([0,1,1]).reshape((3,1))
+    model = Prototype()
+    print(model.fit(X_train,Y_train))
