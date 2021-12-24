@@ -66,5 +66,8 @@ class Prototype:
 if __name__ == "__main__":
     X_train =np.array([[1],[2],[3]])
     Y_train = np.array([0,1,1]).reshape((3,1))
+    X_train =np.array([[-100,-10],[0,2],[10,15],[-30,-1],[1,-2],[20,15]])
+    Y_train = np.array([0,0,1,0,0,1])
+    Y_train=Y_train.reshape((Y_train.shape[0],1))
     model = Prototype()
     print(model.fit(X_train,Y_train))
