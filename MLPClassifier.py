@@ -2,12 +2,13 @@ import numpy as np
 import pandas as pd
 class MLPClassifier:
     def __init__(self,hidden_layer_size,alpha=0.0001,learning_rate=0.1,
-                max_iter=20000, random_state=42):
+                max_iter=5000, random_state=42,momentum = 0.9):
         self.hidden_layer_size : tuple = hidden_layer_size
         self.alpha : float = alpha
         self.learning_rate: float = learning_rate
         self.max_iter : int = max_iter
         self.random_state = random_state
+        self.momentum = momentum
     def fit(self,X_train : np.array, Y_train : np.array):
         """ X_train is an array of dimension (m,n),
             where m is the size of the training set and
@@ -31,6 +32,8 @@ class MLPClassifier:
         dZ = list(range(len(self.hidden_layer_size)+1))
         dW = list(range(len(self.hidden_layer_size)+1))
         db = list(range(len(self.hidden_layer_size)+1))
+        momentum_dW = [0] * len(dW)
+        momentum_db = [0] * len(db)
         sigmoid = list(range(len(self.hidden_layer_size)+1))
         self.W[0] = np.random.randn(
                                     self.hidden_layer_size[0],X_train.shape[0]
@@ -72,23 +75,36 @@ class MLPClassifier:
 
             db[len(self.hidden_layer_size)] = 1/X_train.shape[1]*np.sum(
                     dZ[len(self.hidden_layer_size)],axis=1,keepdims=True)
+        
 
             for k in range(len(self.hidden_layer_size)-1,0,-1):
                 dZ[k] = self.W[k+1].T.dot(dZ[k+1])*(sigmoid[k]*(1-sigmoid[k]))
                 dW[k] = 1/X_train.shape[1]*dZ[k].dot(sigmoid[k-1].T)
                 db[k] = 1/X_train.shape[1]*np.sum(dZ[k],axis=1,keepdims=True)
+                #compute the momentum
+                momentum_dW[k] = self.momentum * momentum_dW[k] + (1 - self.momentum) * dW[k]
+                momentum_db[k] = self.momentum * momentum_db[k] + (1 - self.momentum) * db[k]
             dZ[0] = self.W[1].T.dot(dZ[1])*(sigmoid[0]*(1-sigmoid[0]))
             dW[0] = 1/X_train.shape[1]*dZ[0].dot(X_train.T)
             db[0] = 1/X_train.shape[1]*np.sum(dZ[0],axis=1,keepdims=True)
+            #compute the remaining momentum
+            momentum_dW[0] = self.momentum * momentum_dW[0] + (1 - self.momentum) * dW[0]
+            momentum_db[0] = self.momentum * momentum_db[0] + (1 - self.momentum) * db[0]
+            momentum_dW[len(self.hidden_layer_size)] = self.momentum * momentum_dW[
+                len(self.hidden_layer_size)] + (1 - self.momentum) * dW[len(self.hidden_layer_size)
+                                                                                ]
+            momentum_db[len(self.hidden_layer_size)] = self.momentum * momentum_db[
+                len(self.hidden_layer_size)] + (1 - self.momentum) * db[len(self.hidden_layer_size)
+                                                                                ]
             """update using gradient descent and regularization"""
             """we use here the frobenius norm(L2 norm of a matrix) this can be viewed as weight decay"""
-
+            """we use momentum to so that the gradient descent method converts faster"""
             for l in range(len(self.hidden_layer_size)+1):
                 self.W[l] = (1-self.learning_rate*self.alpha/X_train.shape[1]
-                            )*self.W[l] - self.learning_rate*dW[l]
+                            )*self.W[l] - self.learning_rate*momentum_dW[l]
 
                 self.b[l] = (1-self.learning_rate*self.alpha/X_train.shape[1]
-                            )*self.b[l] - self.learning_rate*db[l]
+                            )*self.b[l] - self.learning_rate*momentum_db[l]
 
         return cost_function
 
