@@ -29,7 +29,7 @@ class MLPClassifier:
         """
         Y_train = pd.get_dummies(
                                 Y_train.reshape(Y_train.shape[0])
-                                ).drop(0,axis=1).values.T
+                                ).values.T
         
         self.W = list(range(len(self.hidden_layer_size)+1))
 
@@ -75,18 +75,18 @@ class MLPClassifier:
 
             sigmoid[0] = 1/(1 + np.exp(-(self.W[0].dot(X_train) + self.b[0])))
 
-            for j in range(1,len(self.hidden_layer_size)+1):
+            for j in range(1,len(self.hidden_layer_size)):
 
                 sigmoid[j] = 1/(1 + np.exp(-(self.W[j].dot(sigmoid[j-1]) + self.b[j])))
-
+            z = self.W[len(self.hidden_layer_size)].dot(sigmoid[len(self.hidden_layer_size)-1]
+                                                        ) + self.b[len(self.hidden_layer_size)]
+            z = np.exp(z)
+            sigmoid[len(self.hidden_layer_size)] = z/z.sum(axis=0)
             #computer the cost function
-            
-            cost_function = -np.mean(Y_train*np.log(
-                            sigmoid[len(self.hidden_layer_size)]
-                                                    )+(1-Y_train
-                                                    )*np.log(1-sigmoid[len(
-                                                        self.hidden_layer_size)]))
-            
+            """I put the cost function here, but you can also put at the end of  this methode.
+                The purpose was, that maybe some one want to plot the cost function after each iteration"""
+            cost_function = -(Y_train*np.log(sigmoid[len(self.hidden_layer_size)])).sum()/Y_train.shape[1]
+
             """backward propagation"""
             dZ[len(self.hidden_layer_size)] = sigmoid[len(self.hidden_layer_size)] - Y_train
 
@@ -129,12 +129,14 @@ class MLPClassifier:
                 self.b[l] = (1-self.learning_rate*self.alpha/X_train.shape[1]
                             )*self.b[l] - self.learning_rate*db[l]
 
+        
+
         return cost_function
 
 
 
     def predict(self,X_test : np.array,threshold=0.6):
-
+        
         prediction_array = X_test.T
 
         for i in range(len(self.hidden_layer_size)+1):
@@ -142,20 +144,7 @@ class MLPClassifier:
             prediction_array = self.W[i].dot(prediction_array) + self.b[i]
 
             prediction_array = 1/(1+np.exp(-prediction_array))
-
-        prediction = np.zeros((X_test.shape[0],1))
-
-        prediction_array = prediction_array.T>threshold
-
-        arg = prediction_array.argmax(axis=1)
-
-        for l in range(X_test.shape[0]):
-
-            if prediction_array[l].any(): 
-
-                prediction[l] = arg[l]+1
-
-        return prediction
+        return prediction_array.T.argmax(axis=1)
 
 if __name__ == "__main__":
     X_train =np.array([[-100,-10],[0,2],[100,150],[-30,-1],[1,-2],[200,105],[4,5],[2,3]])
