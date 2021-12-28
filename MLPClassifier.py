@@ -162,7 +162,7 @@ if __name__ == "__main__":
     Y_train = np.array([0,1,2,0,1,2,1,1])
     Y_train=Y_train.reshape((Y_train.shape[0],1))
 
-    model = MLPClassifier((2,3,2))
+    model = MLPClassifier((2,3,2),alpha=0.000001,max_iter=10000)
     print(model.fit(X_train,Y_train))
     X_test = np.array([[-40,-10],[3,2],[100,150],[-5,-2],[2,-2],[15,25]])
     d=model.predict(X_test)
