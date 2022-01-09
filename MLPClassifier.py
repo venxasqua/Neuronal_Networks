@@ -3,7 +3,8 @@ import pandas as pd
 import numba as nb
 class MLPClassifier:
     def __init__(self,hidden_layer_size,alpha=0.0001,learning_rate=0.1,
-                max_iter=2000, random_state=42,momentum = 0.9,use_momentum = True,mode="multi-task",threshold=0.5):
+                max_iter=2000, random_state=42,momentum = 0.9,use_momentum = True,
+                mode="multi-task",threshold=0.5):
 
         self.hidden_layer_size : tuple = hidden_layer_size
         self.alpha : float = alpha
@@ -52,7 +53,7 @@ class MLPClassifier:
             n is the numbers of feature
             Y_train is an array of dimension (m,1) with value of type int"""
         """ some preparation"""
- 
+        print(Y_train)
         X_train = X_train.T  
  
         """ we get the dummies matrix for Y_train so, if we want to identify
@@ -87,7 +88,8 @@ class MLPClassifier:
 
             for j in range(1,len(self.hidden_layer_size)+1):
 
-                sigmoid[j] = 1/(1 + np.exp(-(self.W[j].dot(sigmoid[j-1]) + self.b[j])))
+                #sigmoid[j] = 1/(1 + np.exp(-(self.W[j].dot(sigmoid[j-1]) + self.b[j])))
+                sigmoid[j] = self.activation_function(self.W[j],self.b[j],sigmoid[j-1])
             """for the last layer we use mode to compute the activasion function"""
             if self.mode == "softmax":
                 z = self.W[len(self.hidden_layer_size)].dot(sigmoid[len(self.hidden_layer_size)-1]
@@ -95,15 +97,20 @@ class MLPClassifier:
                 z = np.exp(z)
                 sigmoid[len(self.hidden_layer_size)] = z/z.sum(axis=0)
 
-
+            self.sigmoid = sigmoid[len(self.hidden_layer_size)]
             #computer the cost function
             """I put the cost function here, but you can also put at the end of  this methode.
                 The purpose was, that maybe some one want to plot the cost function after each iteration"""
-            cost_function = -(Y_train*np.log(sigmoid[len(self.hidden_layer_size)]
+            self.cost_function = -(Y_train*np.log(sigmoid[len(self.hidden_layer_size)]
                                             )+(1-Y_train)*np.log(1-sigmoid[len(self.hidden_layer_size)])
-                            ).sum()/Y_train.shape[1]
+                            ).sum(
+
+                            )/Y_train.shape[1]
             if self.mode == "softmax":
-                cost_function = -(Y_train*np.log(sigmoid[len(self.hidden_layer_size)])).sum()/Y_train.shape[1]
+                self.cost_function = -(Y_train*np.log(sigmoid[len(self.hidden_layer_size)])).sum(
+
+                )#/Y_train.shape[0]
+
 
             """backward propagation"""
             dZ[len(self.hidden_layer_size)] = sigmoid[len(self.hidden_layer_size)] - Y_train
@@ -147,22 +154,31 @@ class MLPClassifier:
                 self.b[l] = (1-self.learning_rate*self.alpha/X_train.shape[1]
                             )*self.b[l] - self.learning_rate*db[l]
 
-        return cost_function
+        return self
 
 
 
     def predict(self,X_test : np.array):
         prediction_array = X_test.T
-        for i in range(len(self.hidden_layer_size)+1):
+        for i in range(len(self.hidden_layer_size)):
 
             prediction_array = self.W[i].dot(prediction_array) + self.b[i]
 
             prediction_array = 1/(1+np.exp(-prediction_array))
         if self.mode == "softmax":
-            return prediction_array.T.argmax(axis=1)
-        prediction_array = prediction_array > self.threshold
-        return self.predict_help(prediction_array)
+            prediction_array = self.W[len(self.hidden_layer_size)].dot(prediction_array) + self.b[len(self.hidden_layer_size)]
+            prediction_array = np.exp(prediction_array)
+            prediction_array = prediction_array/prediction_array.sum(axis=0) 
+            return prediction_array.argmax(axis=0)
+        prediction_array = self.W[len(self.hidden_layer_size)].dot(prediction_array) + self.b[len(self.hidden_layer_size)]
+        prediction_array = 1/(1+np.exp(-prediction_array))
+        return self.predict_help(prediction_array>self.threshold)
 
+
+    @staticmethod
+    @nb.jit(nopython=True)
+    def activation_function(W,b,sigmoid):
+        return 1/(1 + np.exp(-(W.dot(sigmoid) + b)))
 
     @staticmethod
     @nb.jit(nopython=True)
@@ -181,13 +197,30 @@ class MLPClassifier:
         return predict
 
 
+
 if __name__ == "__main__":
+    """
     X_train =np.array([[-100,-10],[0,2],[140,150],[-30,-1],[1,-2],[200,105],[4,5],[2,3],[101,105],[102,100],[103,130],[104,150],[142,125],[160,180]])
     Y_train = np.array([0,1,2,0,1,2,1,1,2,2,2,2,2,2])
     Y_train=Y_train.reshape((Y_train.shape[0],1))
-
-    model = MLPClassifier((2,3,2),alpha=0.001,max_iter=2000,mode="0",threshold=0.6)
-    print(model.fit(X_train,Y_train))
-    X_test = np.array([[-40,-10],[3,2],[180,150],[-5,-2],[2,-2],[15,25]])
+    model = MLPClassifier((2,3,2),alpha=0.001,max_iter=2000,mode="softmax",threshold=0.6)
+    model.fit(X_train,Y_train)
+    print(model.cost_function)
+    X_test = np.array([[-40,-10],[3,2],[180,150],[-5,-2],[2,-2],[15,25],[0,0],[10000,1000]])
     d=model.predict(X_test)
     print(d)
+    print(X_test.shape)
+    print(model.cost_function)
+    """
+    import numpy as np 
+    from sklearn.datasets import fetch_openml
+    mnist = fetch_openml('mnist_784', version=1)
+    X, y = mnist["data"], mnist["target"]
+    y = y.astype(np.uint8)
+    X_train, X_test, y_train, y_test = X[:60000], X[60000:], y[:60000], y[60000:]
+    y_train_5 = (y_train == 5) # True bei allen 5en, False bei allen anderen Ziffern.
+    y_test_5 = (y_test == 5)
+    y
+    model = MLPClassifier((14,10),alpha=0.1,max_iter=500)
+    X_train_scaled = X_train/255
+    model.fit(X_train_scaled,y_train_5.values)
